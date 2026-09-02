@@ -155,6 +155,10 @@
     </div>
 
     <button id="btn-tambah" class="btn btn-primary">+ Tambah Lokasi</button>
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 14px;margin:10px 0;font-size:0.72rem;color:#9ca3af;line-height:1.7;">
+      <strong style="color:#34d399;">Makluman Penting</strong><br>
+      Waktu solat bagi setiap lokasi dikemas kini secara automatik oleh sistem Kindle apabila pengguna mengakses mana-mana modul pembelajaran. Aplikasi ini berfungsi sebagai antara muka pengurusan lokasi sahaja — penetapan lokasi aktif akan digunakan oleh Kindle sebagai rujukan waktu solat harian.
+    </div>    
 
     <!-- Form tambah/edit -->
     <div id="form-lokasi" class="form-box" style="display:none;">
@@ -284,9 +288,7 @@
         btnEdit.onclick = (function(l) { return function() { bukaFormEdit(l); }; })(lok);
 
         var btnRefresh = document.createElement('button');
-        btnRefresh.className = 'btn btn-secondary';
-        btnRefresh.textContent = '↺ Waktu';
-        btnRefresh.onclick = (function(l) { return function() { refreshWaktu(l); }; })(lok);
+        btnRefresh.style.display = 'none';
 
         var btnHapus = document.createElement('button');
         btnHapus.className = 'btn btn-danger';
@@ -300,8 +302,7 @@
         card.appendChild(btnRow);
         list.appendChild(card);
 
-        // Auto fetch waktu kalau belum ada
-        if (!lok.waktu) { refreshWaktu(lok); }
+        // Waktu diurus oleh Kindle — tiada fetch dari app ini
       });
     }
 
@@ -402,16 +403,7 @@
         document.getElementById('form-lokasi').style.display = 'none';
         editId = null;
         self.disabled = false;
-        // Auto fetch waktu solat untuk lokasi baru
-        var newId = editId || (ref ? ref.id : null);
-        if (ref && ref.id) {
-          fetchWaktu(lat, lng, function(waktu) {
-            if (waktu) {
-              db.collection('users').doc(uid).collection('solat_lokasi').doc(ref.id)
-                .update({ waktu: waktu, waktuUpdated: Date.now() }).catch(function() {});
-            }
-          });
-        }
+        // Waktu solat akan direfresh secara automatik oleh app Kindle
       }).catch(function(e) {
         setErr('form-err', 'Ralat: ' + e.message);
         self.disabled = false;
