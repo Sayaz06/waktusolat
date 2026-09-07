@@ -238,6 +238,7 @@
           snap.forEach(function(d) { var x = d.data(); x.id = d.id; allLokasi.push(x); });
           allLokasi.sort(function(a, b) { return (a.nama || '').localeCompare(b.nama || ''); });
           renderLokasi();
+          autoRefreshSemua();
         }, function(e) { setErr('main-err', 'Ralat: ' + e.message); });
     }
 
@@ -293,7 +294,9 @@
         btnEdit.onclick = (function(l) { return function() { bukaFormEdit(l); }; })(lok);
 
         var btnRefresh = document.createElement('button');
-        btnRefresh.style.display = 'none';
+        btnRefresh.className = 'btn btn-secondary';
+        btnRefresh.textContent = '↻ Refresh';
+        btnRefresh.onclick = (function(l) { return function() { refreshWaktu(l); }; })(lok);
 
         var btnHapus = document.createElement('button');
         btnHapus.className = 'btn btn-danger';
@@ -339,13 +342,33 @@
     }
 
     // ── Refresh waktu solat ──
-    function refreshWaktu(lok) {
+    function refreshWaktu(lok, silentBtn) {
       if (!currentUser || !lok.lat || !lok.lng) return;
-      fetchWaktu(lok.lat, lok.lng, function(waktu) {
-        if (!waktu) return;
-        db.collection('users').doc(currentUser.uid).collection('solat_lokasi').doc(lok.id)
-          .update({ waktu: waktu, waktuUpdated: Date.now() })
-          .catch(function() {});
+      var now = new Date();
+      var dd = String(now.getDate()).padStart(2, '0');
+      var mm = String(now.getMonth() + 1).padStart(2, '0');
+      var yyyy = now.getFullYear();
+      var tarikh = dd + '-' + mm + '-' + yyyy;
+      var url = 'https://api.aladhan.com/v1/timings/' + tarikh + '?latitude=' + lok.lat + '&longitude=' + lok.lng + '&method=3';
+      fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.code === 200) {
+          var t = data.data.timings;
+          var waktu = { Subuh: t.Fajr, Syuruk: t.Sunrise, Zohor: t.Dhuhr, Asar: t.Asr, Maghrib: t.Maghrib, Isyak: t.Isha };
+          db.collection('users').doc(currentUser.uid).collection('solat_lokasi').doc(lok.id)
+            .update({ waktu: waktu, waktuUpdated: Date.now() })
+            .catch(function() {});
+        }
+      }).catch(function() {});
+    }
+
+    // ── Auto-refresh semua lokasi setiap kali data dimuatkan ──
+    function autoRefreshSemua() {
+      var now = Date.now();
+      var LAPUK_MS = 6 * 60 * 60 * 1000; // 6 jam
+      allLokasi.forEach(function(lok) {
+        if (!lok.waktuUpdated || (now - lok.waktuUpdated) > LAPUK_MS) {
+          refreshWaktu(lok);
+        }
       });
     }
 
