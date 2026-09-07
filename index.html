@@ -215,7 +215,12 @@
 
     // ── Fetch waktu solat dari Aladhan ──
     function fetchWaktu(lat, lng, cb) {
-      var url = 'https://api.aladhan.com/v1/timings?latitude=' + lat + '&longitude=' + lng + '&method=3';
+      var now = new Date();
+      var dd = String(now.getDate()).padStart(2, '0');
+      var mm = String(now.getMonth() + 1).padStart(2, '0');
+      var yyyy = now.getFullYear();
+      var tarikh = dd + '-' + mm + '-' + yyyy;
+      var url = 'https://api.aladhan.com/v1/timings/' + tarikh + '?latitude=' + lat + '&longitude=' + lng + '&method=3';
       fetch(url).then(function(r) { return r.json(); }).then(function(data) {
         if (data.code === 200) {
           var t = data.data.timings;
