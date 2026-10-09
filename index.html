@@ -355,7 +355,7 @@
           var t = data.data.timings;
           var waktu = { Subuh: t.Fajr, Syuruk: t.Sunrise, Zohor: t.Dhuhr, Asar: t.Asr, Maghrib: t.Maghrib, Isyak: t.Isha };
           db.collection('users').doc(currentUser.uid).collection('solat_lokasi').doc(lok.id)
-            .update({ waktu: waktu, waktuUpdated: Date.now() })
+            .update({ waktu: waktu, waktuUpdated: Date.now(), waktuTarikh: yyyy + '-' + mm + '-' + dd })
             .catch(function() {});
         }
       }).catch(function() {});
@@ -420,8 +420,20 @@
       var data = { nama: nama, lat: lat, lng: lng, updatedAt: Date.now() };
 
       var p;
-      if (editId) {
-        p = db.collection('users').doc(uid).collection('solat_lokasi').doc(editId).update(data);
+      var idEdit = editId;
+      var lokLama = null;
+      if (idEdit) {
+        allLokasi.forEach(function(l) { if (l.id === idEdit) lokLama = l; });
+        var koordBerubah = !lokLama || lokLama.lat !== lat || lokLama.lng !== lng;
+        if (koordBerubah) { data.waktuUpdated = 0; data.waktuTarikh = ''; }
+        var batchEdit = db.batch();
+        batchEdit.update(db.collection('users').doc(uid).collection('solat_lokasi').doc(idEdit), data);
+        if (lokLama && lokLama.aktif) {
+          batchEdit.set(db.collection('users').doc(uid).collection('kindle_settings').doc('solat_lokasi'), {
+            lokasiId: idEdit, nama: nama, lat: lat, lng: lng, updatedAt: Date.now()
+          });
+        }
+        p = batchEdit.commit();
       } else {
         data.aktif = false;
         p = db.collection('users').doc(uid).collection('solat_lokasi').add(data);
@@ -431,7 +443,9 @@
         document.getElementById('form-lokasi').style.display = 'none';
         editId = null;
         self.disabled = false;
-        // Waktu solat akan direfresh secara automatik oleh app Kindle
+        // Refresh waktu terus untuk lokasi ini (koordinat baru)
+        var idSasaran = idEdit || (ref && ref.id);
+        if (idSasaran) refreshWaktu({ id: idSasaran, lat: lat, lng: lng });
       }).catch(function(e) {
         setErr('form-err', 'Ralat: ' + e.message);
         self.disabled = false;
