@@ -349,7 +349,8 @@
       var mm = String(now.getMonth() + 1).padStart(2, '0');
       var yyyy = now.getFullYear();
       var tarikh = dd + '-' + mm + '-' + yyyy;
-      var url = 'https://api.aladhan.com/v1/timings/' + tarikh + '?latitude=' + lok.lat + '&longitude=' + lok.lng + '&method=11';
+      var url = 'https://api.aladhan.com/v1/timings/' + tarikh + '?latitude=' + lok.lat + '&longitude=' + lok.lng +
+        '&method=99&methodSettings=18,null,18&tune=0,1,0,2,0,2,0,2,0';
       fetch(url).then(function(r) { return r.json(); }).then(function(data) {
         if (data.code === 200) {
           var t = data.data.timings;
