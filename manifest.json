@@ -1,24 +1,520 @@
-{
-  "name": "Lokasi Solat",
-  "short_name": "Lokasi",
-  "description": "Urus lokasi waktu solat untuk Kindle",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lokasi Solat</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lokasi">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: #0f172a; color: #e5e7eb;
+      font-family: Georgia, "Times New Roman", serif;
+      min-height: 100vh; -webkit-text-size-adjust: 100%;
     }
-  ]
-}
+    body { padding: 16px; max-width: 440px; margin: 0 auto; }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; padding-bottom: 12px;
+      border-bottom: 1px solid #1f2937;
+    }
+    .topbar-title { font-size: 1.1rem; font-weight: bold; color: #34d399; }
+    .topbar-sub { font-size: 0.72rem; color: #6b7280; margin-top: 2px; }
+
+    /* ── INPUT ── */
+    input[type="text"], input[type="password"], input[type="number"] {
+      display: block; width: 100%; padding: 11px 12px;
+      font-size: 0.95rem; font-family: Georgia, serif;
+      background: #1e293b; color: #e5e7eb;
+      border: 1px solid #334155; border-radius: 8px;
+      outline: none; margin: 6px 0;
+    }
+    input:focus { border-color: #34d399; }
+    label { font-size: 0.78rem; color: #9ca3af; margin-top: 10px; display: block; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: block; width: 100%; padding: 12px;
+      font-size: 0.9rem; font-weight: bold; text-align: center;
+      border-radius: 8px; cursor: pointer; margin: 6px 0;
+      font-family: Georgia, serif;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none; color: #e5e7eb;
+      box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+    }
+    .btn-primary:active { opacity: 0.85; }
+    .btn-secondary {
+      background: transparent; color: #9ca3af;
+      border: 1px solid #334155;
+    }
+    .btn-secondary:active { background: #1e293b; }
+    .btn-danger {
+      background: transparent; color: #f87171;
+      border: 1px solid #f87171;
+    }
+    .btn-danger:active { background: #450a0a; }
+    .btn-aktif {
+      background: transparent; color: #34d399;
+      border: 2px solid #34d399;
+    }
+    .btn-sm {
+      padding: 8px 12px; font-size: 0.78rem; width: auto; display: inline-block;
+    }
+
+    /* ── MSG ── */
+    .msg { font-size: 0.8rem; text-align: center; min-height: 1.2em; margin: 4px 0; }
+    .error { color: #f87171; }
+    .success { color: #34d399; }
+
+    /* ── CARD LOKASI ── */
+    .lokasi-card {
+      background: radial-gradient(circle at top left, #020617 0, #030712 45%, #000 100%);
+      border: 1px solid #1f2937; border-radius: 12px;
+      padding: 16px; margin: 8px 0;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+    }
+    .lokasi-nama {
+      font-size: 1rem; font-weight: bold; color: #e5e7eb; margin-bottom: 4px;
+    }
+    .lokasi-coord {
+      font-size: 0.72rem; color: #6b7280; margin-bottom: 10px;
+    }
+    .lokasi-waktu {
+      font-size: 0.78rem; color: #9ca3af; line-height: 1.8;
+      margin-bottom: 10px;
+    }
+    .lokasi-waktu span { color: #34d399; font-weight: bold; }
+    .lokasi-aktif-badge {
+      display: inline-block; padding: 2px 8px;
+      background: #064e3b; color: #34d399;
+      border-radius: 999px; font-size: 0.68rem;
+      font-weight: bold; margin-bottom: 8px;
+    }
+    .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-row .btn { flex: 1; margin: 0; }
+
+    /* ── FORM TAMBAH ── */
+    .form-box {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 12px; padding: 16px; margin: 12px 0;
+    }
+    .form-title { font-size: 0.85rem; font-weight: bold; color: #34d399; margin-bottom: 12px; }
+
+    /* ── PIN ── */
+    .pin-input {
+      display: block; width: 100%; padding: 14px;
+      font-size: 1.6rem; text-align: center; letter-spacing: 0.5em;
+      background: #1e293b; color: #e5e7eb;
+      border: 1px solid #334155; border-radius: 8px;
+      margin: 12px 0; outline: none;
+    }
+    .pin-input:focus { border-color: #34d399; }
+
+    /* ── LOADING ── */
+    #loading-msg { text-align: center; color: #6b7280; font-size: 0.85rem; padding: 30px 0; }
+
+    /* ── EMPTY ── */
+    .empty-msg { text-align: center; color: #4b5563; font-size: 0.85rem; padding: 40px 0; }
+
+    h1 { font-size: 1.3rem; text-align: center; color: #34d399; margin: 20px 0 8px; }
+    .sub { text-align: center; font-size: 0.78rem; color: #6b7280; margin-bottom: 24px; }
+  </style>
+</head>
+<body>
+
+  <!-- ══ LOGIN ══ -->
+  <div id="screen-login" class="screen active">
+    <h1>🕌 Lokasi Solat</h1>
+    <p class="sub">Urus lokasi waktu solat Kindle</p>
+    <input id="pin-input" class="pin-input" type="password"
+           inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="off">
+    <button id="btn-login" class="btn btn-primary">Masuk</button>
+    <div id="login-err" class="msg error"></div>
+  </div>
+
+  <!-- ══ UTAMA ══ -->
+  <div id="screen-main" class="screen">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">🕌 Lokasi Solat</div>
+        <div class="topbar-sub" id="user-label"></div>
+      </div>
+      <button id="btn-logout" class="btn btn-secondary btn-sm">Log Keluar</button>
+    </div>
+
+    <button id="btn-tambah" class="btn btn-primary">+ Tambah Lokasi</button>
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 14px;margin:10px 0;font-size:0.72rem;color:#9ca3af;line-height:1.7;">
+      <strong style="color:#34d399;">Makluman Penting</strong><br>
+      Waktu solat bagi setiap lokasi dikemas kini secara automatik oleh sistem Kindle apabila pengguna mengakses mana-mana modul pembelajaran. Aplikasi ini berfungsi sebagai antara muka pengurusan lokasi sahaja — penetapan lokasi aktif akan digunakan oleh Kindle sebagai rujukan waktu solat harian.
+    </div>    
+
+    <!-- Form tambah/edit -->
+    <div id="form-lokasi" class="form-box" style="display:none;">
+      <div class="form-title" id="form-title">Tambah Lokasi Baharu</div>
+      <label>Nama Tempat</label>
+      <input type="text" id="input-nama" placeholder="cth: Jerantut, Rumah, Pejabat">
+      <label>Latitude</label>
+      <input type="text" id="input-lat" placeholder="cth: 3.9382" inputmode="decimal">
+      <label>Longitude</label>
+      <input type="text" id="input-lng" placeholder="cth: 102.3534" inputmode="decimal">
+      <div class="msg error" id="form-err"></div>
+      <div class="btn-row" style="margin-top:12px;">
+        <button id="btn-simpan" class="btn btn-primary">Simpan</button>
+        <button id="btn-batal-form" class="btn btn-secondary">Batal</button>
+      </div>
+    </div>
+
+    <div id="loading-msg">Memuatkan...</div>
+    <div id="lokasi-list"></div>
+    <div id="empty-msg" class="empty-msg" style="display:none;">Belum ada lokasi. Tekan + Tambah Lokasi.</div>
+    <div id="main-err" class="msg error"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+  <script>
+    var firebaseConfig = {
+      apiKey: "AIzaSyAGLX_xxH_dQ06epX4XCXtuSHN0DwZFMjA",
+      authDomain: "stress-auti-action.firebaseapp.com",
+      projectId: "stress-auti-action",
+      storageBucket: "stress-auti-action.firebasestorage.app",
+      messagingSenderId: "792580618622",
+      appId: "1:792580618622:web:f0efb1d630e795584d5b2f"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var auth = firebase.auth();
+    var db   = firebase.firestore();
+
+    var ADMIN_EMAIL = 'adha86614@gmail.com';
+    var currentUser = null;
+    var allLokasi   = [];
+    var editId      = null;
+    var _unsubLokasi = null;
+
+    // ── Helper ──
+    function show(id) {
+      ['screen-login','screen-main'].forEach(function(s) {
+        document.getElementById(s).className = 'screen' + (s === id ? ' active' : '');
+      });
+    }
+    function setErr(id, msg) { document.getElementById(id).textContent = msg || ''; }
+
+    // ── Fetch waktu solat dari Aladhan ──
+    function fetchWaktu(lat, lng, cb) {
+      var now = new Date();
+      var dd = String(now.getDate()).padStart(2, '0');
+      var mm = String(now.getMonth() + 1).padStart(2, '0');
+      var yyyy = now.getFullYear();
+      var tarikh = dd + '-' + mm + '-' + yyyy;
+      var url = 'https://api.aladhan.com/v1/timings/' + tarikh + '?latitude=' + lat + '&longitude=' + lng + '&method=3';
+      fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.code === 200) {
+          var t = data.data.timings;
+          cb({ Subuh: t.Fajr, Syuruk: t.Sunrise, Zohor: t.Dhuhr, Asar: t.Asr, Maghrib: t.Maghrib, Isyak: t.Isha });
+        } else { cb(null); }
+      }).catch(function() { cb(null); });
+    }
+
+    // ── Subscribe lokasi ──
+    function subscribeLokasi(uid) {
+      if (_unsubLokasi) { _unsubLokasi(); _unsubLokasi = null; }
+      _unsubLokasi = db.collection('users').doc(uid).collection('solat_lokasi')
+        .onSnapshot(function(snap) {
+          allLokasi = [];
+          snap.forEach(function(d) { var x = d.data(); x.id = d.id; allLokasi.push(x); });
+          allLokasi.sort(function(a, b) { return (a.nama || '').localeCompare(b.nama || ''); });
+          renderLokasi();
+          autoRefreshSemua();
+        }, function(e) { setErr('main-err', 'Ralat: ' + e.message); });
+    }
+
+    // ── Render senarai lokasi ──
+    function renderLokasi() {
+      document.getElementById('loading-msg').style.display = 'none';
+      var list = document.getElementById('lokasi-list');
+      list.innerHTML = '';
+      var emptyEl = document.getElementById('empty-msg');
+
+      if (!allLokasi.length) { emptyEl.style.display = 'block'; return; }
+      emptyEl.style.display = 'none';
+
+      allLokasi.forEach(function(lok) {
+        var card = document.createElement('div');
+        card.className = 'lokasi-card';
+
+        var html = '';
+        if (lok.aktif) { html += '<div class="lokasi-aktif-badge">✓ AKTIF</div>'; }
+        html += '<div class="lokasi-nama">' + (lok.nama || '—') + '</div>';
+        html += '<div class="lokasi-coord">📍 ' + (lok.lat || '') + ', ' + (lok.lng || '') + '</div>';
+
+        // Waktu solat
+        if (lok.waktu) {
+          html += '<div class="lokasi-waktu">';
+          html += 'Subuh: <span>' + lok.waktu.Subuh + '</span> &nbsp;|&nbsp; ';
+          html += 'Zohor: <span>' + lok.waktu.Zohor + '</span> &nbsp;|&nbsp; ';
+          html += 'Asar: <span>' + lok.waktu.Asar + '</span><br>';
+          html += 'Maghrib: <span>' + lok.waktu.Maghrib + '</span> &nbsp;|&nbsp; ';
+          html += 'Isyak: <span>' + lok.waktu.Isyak + '</span>';
+          html += '</div>';
+        } else {
+          html += '<div class="lokasi-waktu" style="color:#4b5563;">Waktu solat belum dimuatkan...</div>';
+        }
+
+        card.innerHTML = html;
+
+        // Button row
+        var btnRow = document.createElement('div');
+        btnRow.className = 'btn-row';
+
+        if (!lok.aktif) {
+          var btnAktif = document.createElement('button');
+          btnAktif.className = 'btn btn-aktif';
+          btnAktif.textContent = '✓ Jadikan Aktif';
+          btnAktif.onclick = (function(l) { return function() { jadikanAktif(l.id); }; })(lok);
+          btnRow.appendChild(btnAktif);
+        }
+
+        var btnEdit = document.createElement('button');
+        btnEdit.className = 'btn btn-secondary';
+        btnEdit.textContent = '✎ Edit';
+        btnEdit.onclick = (function(l) { return function() { bukaFormEdit(l); }; })(lok);
+
+        var btnRefresh = document.createElement('button');
+        btnRefresh.className = 'btn btn-secondary';
+        btnRefresh.textContent = '↻ Refresh';
+        btnRefresh.onclick = (function(l) { return function() { refreshWaktu(l); }; })(lok);
+
+        var btnHapus = document.createElement('button');
+        btnHapus.className = 'btn btn-danger';
+        btnHapus.textContent = '✕';
+        btnHapus.style.flex = '0 0 44px';
+        btnHapus.onclick = (function(l) { return function() { hapusLokasi(l.id, l.aktif); }; })(lok);
+
+        btnRow.appendChild(btnEdit);
+        btnRow.appendChild(btnRefresh);
+        btnRow.appendChild(btnHapus);
+        card.appendChild(btnRow);
+        list.appendChild(card);
+
+        // Waktu diurus oleh Kindle — tiada fetch dari app ini
+      });
+    }
+
+    // ── Jadikan aktif ──
+    function jadikanAktif(id) {
+      if (!currentUser) return;
+      var uid = currentUser.uid;
+      var lok = allLokasi.filter(function(l) { return l.id === id; })[0];
+      if (!lok) return;
+
+      var batch = db.batch();
+      // Buang aktif semua
+      allLokasi.forEach(function(l) {
+        if (l.aktif) {
+          batch.update(db.collection('users').doc(uid).collection('solat_lokasi').doc(l.id), { aktif: false });
+        }
+      });
+      // Set aktif lokasi ini
+      batch.update(db.collection('users').doc(uid).collection('solat_lokasi').doc(id), { aktif: true });
+      // Simpan lokasi aktif ke kindle_settings supaya Kindle boleh baca
+      batch.set(db.collection('users').doc(uid).collection('kindle_settings').doc('solat_lokasi'), {
+        lokasiId: id,
+        nama: lok.nama || '',
+        lat: lok.lat,
+        lng: lok.lng,
+        updatedAt: Date.now()
+      });
+      batch.commit().catch(function(e) { setErr('main-err', 'Ralat: ' + e.message); });
+    }
+
+    // ── Refresh waktu solat ──
+    function refreshWaktu(lok, silentBtn) {
+      if (!currentUser || !lok.lat || !lok.lng) return;
+      var now = new Date();
+      var dd = String(now.getDate()).padStart(2, '0');
+      var mm = String(now.getMonth() + 1).padStart(2, '0');
+      var yyyy = now.getFullYear();
+      var tarikh = dd + '-' + mm + '-' + yyyy;
+      var url = 'https://api.aladhan.com/v1/timings/' + tarikh + '?latitude=' + lok.lat + '&longitude=' + lok.lng + '&method=11';
+      fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.code === 200) {
+          var t = data.data.timings;
+          var waktu = { Subuh: t.Fajr, Syuruk: t.Sunrise, Zohor: t.Dhuhr, Asar: t.Asr, Maghrib: t.Maghrib, Isyak: t.Isha };
+          db.collection('users').doc(currentUser.uid).collection('solat_lokasi').doc(lok.id)
+            .update({ waktu: waktu, waktuUpdated: Date.now(), waktuTarikh: yyyy + '-' + mm + '-' + dd })
+            .catch(function() {});
+        }
+      }).catch(function() {});
+    }
+
+    // ── Auto-refresh semua lokasi setiap kali data dimuatkan ──
+    function autoRefreshSemua() {
+      var now = Date.now();
+      var LAPUK_MS = 6 * 60 * 60 * 1000; // 6 jam
+      allLokasi.forEach(function(lok) {
+        if (!lok.waktuUpdated || (now - lok.waktuUpdated) > LAPUK_MS) {
+          refreshWaktu(lok);
+        }
+      });
+    }
+
+    // ── Buka form tambah ──
+    document.getElementById('btn-tambah').addEventListener('click', function() {
+      editId = null;
+      document.getElementById('form-title').textContent = 'Tambah Lokasi Baharu';
+      document.getElementById('input-nama').value = '';
+      document.getElementById('input-lat').value = '';
+      document.getElementById('input-lng').value = '';
+      setErr('form-err', '');
+      document.getElementById('form-lokasi').style.display = 'block';
+      document.getElementById('input-nama').focus();
+    });
+
+    // ── Buka form edit ──
+    function bukaFormEdit(lok) {
+      editId = lok.id;
+      document.getElementById('form-title').textContent = 'Edit Lokasi';
+      document.getElementById('input-nama').value = lok.nama || '';
+      document.getElementById('input-lat').value = lok.lat || '';
+      document.getElementById('input-lng').value = lok.lng || '';
+      setErr('form-err', '');
+      document.getElementById('form-lokasi').style.display = 'block';
+      document.getElementById('input-nama').focus();
+    }
+
+    // ── Batal form ──
+    document.getElementById('btn-batal-form').addEventListener('click', function() {
+      document.getElementById('form-lokasi').style.display = 'none';
+      editId = null;
+    });
+
+    // ── Simpan lokasi ──
+    document.getElementById('btn-simpan').addEventListener('click', function() {
+      var nama = document.getElementById('input-nama').value.trim();
+      var lat  = parseFloat(document.getElementById('input-lat').value.trim());
+      var lng  = parseFloat(document.getElementById('input-lng').value.trim());
+
+      if (!nama) { setErr('form-err', 'Sila masukkan nama tempat.'); return; }
+      if (isNaN(lat) || lat < -90 || lat > 90) { setErr('form-err', 'Latitude tidak sah. Contoh: 3.9382'); return; }
+      if (isNaN(lng) || lng < -180 || lng > 180) { setErr('form-err', 'Longitude tidak sah. Contoh: 102.3534'); return; }
+
+      setErr('form-err', '');
+      var self = this;
+      self.disabled = true;
+
+      var uid = currentUser.uid;
+      var data = { nama: nama, lat: lat, lng: lng, updatedAt: Date.now() };
+
+      var p;
+      var idEdit = editId;
+      var lokLama = null;
+      if (idEdit) {
+        allLokasi.forEach(function(l) { if (l.id === idEdit) lokLama = l; });
+        var koordBerubah = !lokLama || lokLama.lat !== lat || lokLama.lng !== lng;
+        if (koordBerubah) { data.waktuUpdated = 0; data.waktuTarikh = ''; }
+        var batchEdit = db.batch();
+        batchEdit.update(db.collection('users').doc(uid).collection('solat_lokasi').doc(idEdit), data);
+        if (lokLama && lokLama.aktif) {
+          batchEdit.set(db.collection('users').doc(uid).collection('kindle_settings').doc('solat_lokasi'), {
+            lokasiId: idEdit, nama: nama, lat: lat, lng: lng, updatedAt: Date.now()
+          });
+        }
+        p = batchEdit.commit();
+      } else {
+        data.aktif = false;
+        p = db.collection('users').doc(uid).collection('solat_lokasi').add(data);
+      }
+
+      p.then(function(ref) {
+        document.getElementById('form-lokasi').style.display = 'none';
+        editId = null;
+        self.disabled = false;
+        // Refresh waktu terus untuk lokasi ini (koordinat baru)
+        var idSasaran = idEdit || (ref && ref.id);
+        if (idSasaran) refreshWaktu({ id: idSasaran, lat: lat, lng: lng });
+      }).catch(function(e) {
+        setErr('form-err', 'Ralat: ' + e.message);
+        self.disabled = false;
+      });
+    });
+
+    // ── Hapus lokasi ──
+    function hapusLokasi(id, isAktif) {
+      if (!currentUser) return;
+      if (isAktif && !confirm('Lokasi ini sedang aktif. Padam?')) return;
+      db.collection('users').doc(currentUser.uid).collection('solat_lokasi').doc(id)
+        .delete().catch(function(e) { setErr('main-err', 'Ralat padam: ' + e.message); });
+    }
+
+    // ── Login ──
+    document.getElementById('btn-login').addEventListener('click', function() {
+      var pin = document.getElementById('pin-input').value.trim();
+      if (!pin) { setErr('login-err', 'Sila masukkan PIN'); return; }
+      setErr('login-err', '');
+      var self = this; self.disabled = true;
+      auth.signInWithEmailAndPassword(ADMIN_EMAIL, pin)
+        .then(function(cred) {
+          currentUser = cred.user;
+          document.getElementById('pin-input').value = '';
+          document.getElementById('user-label').textContent = currentUser.email || '';
+          show('screen-main');
+          subscribeLokasi(currentUser.uid);
+          self.disabled = false;
+        })
+        .catch(function(e) {
+          setErr('login-err', 'PIN salah: ' + e.message);
+          self.disabled = false;
+        });
+    });
+
+    document.getElementById('pin-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('btn-login').click();
+    });
+
+    // ── Logout ──
+    document.getElementById('btn-logout').addEventListener('click', function() {
+      if (_unsubLokasi) { _unsubLokasi(); _unsubLokasi = null; }
+      auth.signOut().then(function() {
+        currentUser = null;
+        allLokasi = [];
+        document.getElementById('lokasi-list').innerHTML = '';
+        document.getElementById('loading-msg').style.display = 'block';
+        document.getElementById('form-lokasi').style.display = 'none';
+        show('screen-login');
+      });
+    });
+
+    // ── Auth state ──
+    auth.onAuthStateChanged(function(user) {
+      if (user) {
+        currentUser = user;
+        document.getElementById('user-label').textContent = user.email || '';
+        show('screen-main');
+        subscribeLokasi(user.uid);
+      } else {
+        currentUser = null;
+        show('screen-login');
+      }
+    });
+
+    // ── Service Worker ──
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(function(e) { console.warn('SW:', e); });
+    }
+  </script>
+</body>
+</html>
